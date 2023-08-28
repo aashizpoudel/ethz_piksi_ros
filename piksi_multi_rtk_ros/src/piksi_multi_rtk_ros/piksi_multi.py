@@ -48,7 +48,7 @@ from sbp.ext_events import *
 # At the moment importing 'sbp.version' module causes ValueError: Cannot find the version number!
 # import sbp.version
 # networking stuff
-import UdpHelpers
+from .UdpHelpers import *
 import time
 import subprocess
 import re
@@ -306,10 +306,10 @@ class PiksiMulti:
         # Relay "corrections" messages via UDP if in base station mode.
         if self.base_station_mode:
             rospy.loginfo("Starting device in Base Station Mode")
-            self.multicaster = UdpHelpers.SbpUdpMulticaster(self.udp_broadcast_addr, self.udp_port)
+            self.multicaster = SbpUdpMulticaster(self.udp_broadcast_addr, self.udp_port)
         else:
             rospy.loginfo("Starting device in Rover Mode")
-            self.multicast_recv = UdpHelpers.SbpUdpMulticastReceiver(self.udp_port, self.multicast_callback)
+            self.multicast_recv = SbpUdpMulticastReceiver(self.udp_port, self.multicast_callback)
 
     def init_num_corrections_msg(self):
         num_wifi_corrections = InfoWifiCorrections()
@@ -499,6 +499,7 @@ class PiksiMulti:
             ping = subprocess.Popen(command, stdout=subprocess.PIPE)
 
             out, error = ping.communicate()
+            out = str(out)
             # Search for 'min/avg/max/mdev' round trip delay time (rtt) numbers.
             matcher = re.compile("(\d+.\d+)/(\d+.\d+)/(\d+.\d+)/(\d+.\d+)")
 
@@ -721,7 +722,7 @@ class PiksiMulti:
                 rospy.signal_shutdown("Watchdog triggered, was gps disconnected?")
 
     def gps_time_to_utc(self, wn, tow, ns_residual):
-        epoch = datetime.datetime(1980,01,06)
+        epoch = datetime.datetime(1980,1,6)
         secs, msecs = divmod(tow, 1000)
         usec = ns_residual / 1000.0 # TODO(rikba): Handle nanoseconds.
         elapsed = datetime.timedelta(seconds=secs, microseconds=usec, milliseconds=msecs, weeks=wn)
@@ -1453,6 +1454,7 @@ class PiksiMulti:
         out, error = pip_show_output.communicate()
 
         # Search for version number, output assumed in the form "Version: X.X.X"
+        out = str(out)
         version_output = re.search("Version: \d+.\d+.\d+", out)
 
         if version_output is None:
@@ -1463,7 +1465,7 @@ class PiksiMulti:
         else:
             # extract version number
             version_output_string = version_output.group()
-            version_number = re.search("\d+.\d+.\d+", version_output_string)
+            version_number = re.search("\d+.\d+.\d+", str(version_output_string))
             return version_number.group()
 
     def settings_write(self, section_setting, setting, value):
